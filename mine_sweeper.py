@@ -1,6 +1,5 @@
 #! /bin/python
 import random
-from Queue import Queue
 
 dimx = 4
 dimy = 4
@@ -30,6 +29,9 @@ def game_loop(board, dim):
             user_input = get_input(dim[0], dim[1])
 
         is_game_over = apply_input(scene, board, user_input)
+
+    # last render before game ends
+    dump(scene)
 
 
 def board_to_scene(board):
@@ -91,11 +93,13 @@ def apply_input(scene, game_board, xy):
     x, y = xy
     if scene[x][y] != "*":
         return False
+
+    scene[x][y] = game_board[x][y]
+
     if game_board[x][y] == 9:
         print ("BOOM")
         return True
 
-    scene[x][y] = game_board[x][y]
     if scene[x][y] == 0:
         frontier = depth_first(game_board, (x,y))
         for loc in frontier:
