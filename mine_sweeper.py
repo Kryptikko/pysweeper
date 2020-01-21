@@ -1,9 +1,11 @@
+#! /bin/python
 import random
+from Queue import Queue
 
 dimx = 4
 dimy = 4
 random.seed(30)
-MINE_COUNT = 5
+MINE_COUNT = 2
 
 SIDES = [
     (-1, 1), (0,1), (1, 1),
@@ -21,7 +23,12 @@ def game_loop(board, dim):
     scene = board_to_scene(board)
     while not is_game_over:
         dump(scene)
-        user_input = get_input(dim[0], dim[1])
+        try:
+            user_input = get_input(dim[0], dim[1])
+        except RetryInputException:
+            print "Bad Input"
+            user_input = get_input(dim[0], dim[1])
+
         is_game_over = apply_input(scene, board, user_input)
 
 
@@ -34,14 +41,40 @@ def board_to_scene(board):
     return scene
 
 
+def get_neighbors(xy, sides, grapth):
+    for side in sides:
+        side_x = xy[0]+side[0]
+        side_y = xy[1]+side[1]
+        if side_x in range(len(grapth)):
+            if side_y in range(len(grapth[side_x])):
+                yield (side_x, side_y)
+
+
+def depth_first(grapth, start, frontier = []):
+
+    frontier.append(start)
+    for next in get_neighbors(start, SIDES, grapth):
+        if _has_mine(grapth, next):
+            frontier.append(next)
+        elif not next in frontier:
+            frontier += depth_first(grapth, next, frontier)
+
+    return frontier
+
+
+def _has_mine(grapth, loc):
+    x, y = loc
+    return grapth[x][y] > 0
+
+
 def get_input(len_x, len_y):
-    raw_x = input("Enter map x coordinates: ")
-    raw_y = input("Enter map y coordinates: ")
+    raw_x = input("Enter map x coordinates (between 0 and %s): " % len_x)
+    raw_y = input("Enter map y coordinates (between 0 and %s): " % len_y)
     try:
         loc_x = __input_to_loc(raw_x, len_x)
         loc_y = __input_to_loc(raw_y, len_y)
     except Exception as e :
-        raise RetryInputException(e)
+        raise RetryInputException("failed validation")
     return (loc_x, loc_y)
 
 
@@ -64,14 +97,30 @@ def apply_input(scene, game_board, xy):
 
     scene[x][y] = game_board[x][y]
     if scene[x][y] == 0:
-        print("TODO: BREATH FIRST SEARCH")
+        frontier = depth_first(game_board, (x,y))
+        for loc in frontier:
+            x, y = loc
+            scene[x][y] = game_board[x][y]
 
     return False
 
 
 def dump(game_map):
-    for row in game_map:
-        print (row)
+    output = "     "
+    # column indexes
+    for col in range(len(game_map[0])):
+        output += "  %s  " % col
+    output += "\n"
+    output += "\n"
+
+    for row in range(len(game_map)):
+        # row indexes
+        output += " %s   " % row
+        for col in range(len(game_map[row])):
+            output += "| %s |" % game_map[row][col]
+        output += "\n"
+
+    print output
 
 
 def build_map(dimx, dimy):
@@ -86,12 +135,8 @@ def build_map(dimx, dimy):
 
 def ley_mine_markers_generator(sides):
     def lay_mine_markers(output, xy):
-        for side in sides:
-            side_x = xy[0]+side[0]
-            side_y = xy[1]+side[1]
-            if side_x in range(len(output)):
-                if side_y in range(len(output[side_x])):
-                    output[side_x][side_y] = min([9, output[side_x][side_y] + 1])
+        for (side_x, side_y) in get_neighbors(xy, sides, output):
+            output[side_x][side_y] = min([9, output[side_x][side_y] + 1])
         return output
     return lay_mine_markers
 
