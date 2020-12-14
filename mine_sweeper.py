@@ -18,6 +18,7 @@ class RetryInputException(Exception):
 
 
 def game_loop(board, dim):
+    # TODO win scenario
     is_game_over = False
     scene = board_to_scene(board)
     while not is_game_over:
